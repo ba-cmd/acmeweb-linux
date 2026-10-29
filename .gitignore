@@ -1,0 +1,7 @@
+*.key
+id_*
+!*.pub
+*.csv
+!exemple.csv
+*password*
+.env
