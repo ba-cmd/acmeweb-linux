@@ -36,3 +36,41 @@ Dans un environnement plus grand, on utiliserait un serveur DNS pour centraliser
 - 'ping google.com' : Internet fonctionne toujours
 - 'ip route' : la route par défaut passe uniquement par enp0s3
 - Tout fonctionne encore après redémarrage
+
+## Étape 2 – Utilisateurs, groupes et droits
+
+## Objectif
+Créer les comptes de l'équipe sur web01 en appliquant le principe du
+**moindre privilège** : chaque compte n'a que les droits dont il a besoin.
+
+## Ce que j'ai fait
+| Compte     | Groupe | Role                | Droits                                         |
+|------------|--------|---------------------|------------------------------------------------|
+| alice      | admins | Administratrice     | sudo complet, lecture seule sur /srv/projets   |
+| bob, carol | devs   | Développeurs        | travaillent dans /srv/projets, pas de sudo     |
+| deploy     | –      | Compte technique    | peut uniquement recharger / redémarrer Nginx   |
+
+Ces comptes n'existent que sur web01 : backup01 n'en a pas besoin.
+
+## Droits sudo
+Deux fichiers dans '/etc/sudoers.d/', créés avec 'visudo' (qui vérifie la syntaxe) :
+- 'admins' : les membres du groupe **admins** ont tous les droits ;
+- 'deploy' : le compte deploy peut seulement exécuter, sans mot de passe,
+  'systemctl reload nginx' et 'systemctl restart nginx'.
+
+Voir 'config/sudoers.d/'.
+
+## Dossier partagé '/srv/projets'
+Le dossier appartient au groupe 'devs', avec les droits '3770' :
+- 'SGID' : chaque fichier créé dans le dossier appartient automatiquement
+  au groupe devs, quel que soit son créateur ;
+- 'sticky bit' : un développeur ne peut supprimer que ses propres fichiers ;
+- 'ACL' : alice, qui n'est pas dans devs, peut consulter le dossier en
+  lecture seule (avec une ACL par défaut pour les futurs fichiers).
+
+'''bash
+sudo chgrp devs /srv/projets
+sudo chmod 3770 /srv/projets
+sudo setfacl -m u:alice:rx /srv/projets
+sudo setfacl -d -m u:alice:rX /srv/projets
+'''
